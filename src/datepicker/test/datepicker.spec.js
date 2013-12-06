@@ -973,11 +973,11 @@ describe('datepicker directive', function () {
       expect(inputEl.val()).toBe('2010-09-30');
     });
 
-    it('does not to display datepicker initially', function() {
+    it('does not display datepicker initially', function() {
       expect(dropdownEl.css('display')).toBe('none');
     });
 
-    it('displays datepicker on input focus', function() {
+    it('displays datepicker on input focus by default', function() {
       inputEl.focus();
       expect(dropdownEl.css('display')).not.toBe('none');
     });
@@ -1041,6 +1041,20 @@ describe('datepicker directive', function () {
     it('closes when click outside of calendar', function() {
       $document.find('body').click();
       expect(dropdownEl.css('display')).toBe('none');
+    });
+
+    describe('does not display on focus when `displayOnFocus` is false', function () {
+      beforeEach(inject(function() {
+        var wrapElement = $compile('<div><input ng-model="date" datepicker-popup display-on-focus="false"><div>')($rootScope);
+        $rootScope.$digest();
+        assignElements(wrapElement);
+      }));
+
+      it('to not display on focus', function() {
+        inputEl.focus();
+        expect(dropdownEl.css('display')).toBe('none');
+      });
+
     });
 
     describe('toggles programatically by `open` attribute', function () {

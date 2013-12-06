@@ -258,7 +258,8 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
   clearText: 'Clear',
   closeText: 'Done',
   closeOnDateSelection: true,
-  appendToBody: false
+  appendToBody: false,
+  displayOnFocus: true
 })
 
 .directive('datepickerPopup', ['$compile', '$parse', '$document', '$position', 'dateFilter', 'datepickerPopupConfig', 'datepickerConfig',
@@ -275,6 +276,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
 
       var closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? originalScope.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection;
       var appendToBody = angular.isDefined(attrs.datepickerAppendToBody) ? originalScope.$eval(attrs.datepickerAppendToBody) : datepickerPopupConfig.appendToBody;
+      var displayOnFocus = angular.isDefined(attrs.displayOnFocus) ? originalScope.$eval(attrs.displayOnFocus) : datepickerPopupConfig.displayOnFocus;
 
       // create a child scope for the datepicker directive so we are not polluting original scope
       var scope = originalScope.$new();
@@ -295,6 +297,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
       attrs.$observe('closeText', function(text) {
         scope.closeText = angular.isDefined(text) ? text : datepickerPopupConfig.closeText;
       });
+
 
       var getIsOpen, setIsOpen;
       if ( attrs.isOpen ) {
@@ -325,7 +328,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
 
       var elementFocusBind = function() {
         scope.$apply(function() {
-          setOpen( true );
+          setOpen( displayOnFocus );
         });
       };
 
