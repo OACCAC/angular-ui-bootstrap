@@ -259,7 +259,8 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
   closeText: 'Done',
   closeOnDateSelection: true,
   appendToBody: false,
-  displayOnFocus: true
+  displayOnFocus: true,
+  skipCalendarOnTab: false
 })
 
 .directive('datepickerPopup', ['$compile', '$parse', '$document', '$position', 'dateFilter', 'datepickerPopupConfig', 'datepickerConfig',
@@ -277,6 +278,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
       var closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? originalScope.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection;
       var appendToBody = angular.isDefined(attrs.datepickerAppendToBody) ? originalScope.$eval(attrs.datepickerAppendToBody) : datepickerPopupConfig.appendToBody;
       var displayOnFocus = angular.isDefined(attrs.displayOnFocus) ? originalScope.$eval(attrs.displayOnFocus) : datepickerPopupConfig.displayOnFocus;
+      var skipCalendarOnTab = angular.isDefined(attrs.skipCalendarOnTab) ? originalScope.$eval(attrs.skipCalendarOnTab) : datepickerPopupConfig.skipCalendarOnTab;
 
       // create a child scope for the datepicker directive so we are not polluting original scope
       var scope = originalScope.$new();
@@ -333,7 +335,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
       };
 
       // popup element used to display calendar
-      var popupEl = angular.element('<div datepicker-popup-wrap><div datepicker></div></div>');
+      var popupEl = angular.element('<div datepicker-popup-wrap' + (skipCalendarOnTab ? 'tabIndex="-1"': '') + '><div datepicker></div></div>');
       popupEl.attr({
         'ng-model': 'date',
         'ng-change': 'dateSelection()'

@@ -37,6 +37,13 @@ describe('datepicker directive', function () {
     }
   }
 
+  function pressTab(){
+    var press = jQuery.Event("keypress");
+    press.ctrlKey = false;
+    press.which = 9;
+    $(document).trigger(press);
+  };
+
   function getLabelsRow() {
     return element.find('thead').find('tr').eq(1);
   }
@@ -1042,6 +1049,27 @@ describe('datepicker directive', function () {
       $document.find('body').click();
       expect(dropdownEl.css('display')).toBe('none');
     });
+
+    it('should focus on calendar when tab is pressed', function(){
+      inputEl.focus();
+      pressTab();
+      expect(dropdownEl.find('button:has(".glyphicon-chevron-left")').first()[0]).toMatch($document[0].activeElement);
+    });
+
+    describe('with skipCalendarOnTab set to True', function () {
+      beforeEach(inject(function() {
+        var wrapElement = $compile('<div><input ng-model="date" datepicker-popup display-on-focus="true" skip-calendar-on-tab="true"><div>')($rootScope);
+        $rootScope.$digest();
+        assignElements(wrapElement);
+      }));
+
+      it('should not focus on calendar when tab is pressed', function(){
+        inputEl.focus();
+        pressTab();
+        expect(dropdownEl.find('button:has(".glyphicon-chevron-left")').first()[0]).toMatch($document[0].activeElement);
+      });
+    });
+
 
     describe('does not display on focus when `displayOnFocus` is false', function () {
       beforeEach(inject(function() {
