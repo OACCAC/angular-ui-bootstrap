@@ -164,6 +164,9 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
         scope.$parent.$watch($parse(attrs.min), function(value) {
           if(value){
             datepickerCtrl.minDate =  new Date(value);
+            if(!ngModel.$modelValue){
+              selected = new Date(value);
+            }
           } else {
             datepickerCtrl.minDate = null;
           }
@@ -207,8 +210,6 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
           } else if ( updateSelected ) {
             selected = date;
           }
-        } else if (datepickerCtrl.minDate){
-          selected = datepickerCtrl.minDate; //If control has no date, use min date for the calendar
         }
 
         ngModel.$setValidity('date', valid);
