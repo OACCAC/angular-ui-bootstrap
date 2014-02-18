@@ -81,6 +81,10 @@ module.exports = function(grunt) {
           cwd: "misc/demo",
           dest: "dist/"
         }]
+      },
+      dist_chris: {
+        src:['<%= dist %>/<%= filename %>-tpls-<%= pkg.version %>.js'],
+        dest:'C:/Projects/CHRIS/DEV/2.4.0/2.4.0-int/WebPMI2.0/Oaccac.WebPmi/Angular/libs/angular-bootstrap3/<%= filename %>-tpls-<%= pkg.version %>.custom.js'
       }
     },
     uglify: {
@@ -207,6 +211,9 @@ module.exports = function(grunt) {
     }
   });
 
+  grunt.registerTask('logCurrentDate', 'Log Date', function(){
+    grunt.log.writeln(new Date());
+  });
   //Common ui.bootstrap module containing all modules for src and templates
   //findModule: Adds a given module to config
   var foundModules = {};
@@ -318,7 +325,8 @@ module.exports = function(grunt) {
     grunt.config('concat.dist_tpls.src', grunt.config('concat.dist_tpls.src')
                  .concat(srcFiles).concat(tpljsFiles));
 
-    grunt.task.run(['concat', 'uglify']);
+    grunt.task.run(['concat', 'uglify', 'copy:dist_chris','logCurrentDate']);
+
   });
 
   grunt.registerTask('test', 'Run tests on singleRun karma server', function() {

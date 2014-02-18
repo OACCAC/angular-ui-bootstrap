@@ -1,3 +1,5 @@
+
+
 angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
 
 .constant('datepickerConfig', {
@@ -28,6 +30,8 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
 
   this.minDate = dtConfig.minDate ? new Date(dtConfig.minDate) : null;
   this.maxDate = dtConfig.maxDate ? new Date(dtConfig.maxDate) : null;
+
+  this.skipCalendarOnTab = $scope.$eval($attrs.skipCalendarOnTab);
 
   function getValue(value, defaultValue) {
     return angular.isDefined(value) ? $scope.$parent.$eval(value) : defaultValue;
@@ -123,13 +127,14 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
   };
 }])
 
-.directive( 'datepicker', ['dateFilter', '$parse', 'datepickerConfig', '$log', function (dateFilter, $parse, datepickerConfig, $log) {
+.directive( 'datepicker', ['dateFilter', '$parse', 'datepickerConfig', '$log', '$timeout', function (dateFilter, $parse, datepickerConfig, $log, $timeout) {
   return {
     restrict: 'EA',
     replace: true,
     templateUrl: 'template/datepicker/datepicker.html',
     scope: {
-      dateDisabled: '&'
+      dateDisabled: '&',
+      skipCalendarOnTab: '&'
     },
     require: ['datepicker', '?^ngModel'],
     controller: 'DatepickerController',
@@ -139,9 +144,12 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
       if (!ngModel) {
         return; // do nothing if no ng-model
       }
-
       // Configuration parameters
       var mode = 0, selected = new Date(), showWeeks = datepickerConfig.showWeeks;
+
+      if(scope.skipCalendarOnTab() === true){
+          element.find('button').prop('tabIndex', '-1');
+      }
 
       if (attrs.showWeeks) {
         scope.$parent.$watch($parse(attrs.showWeeks), function(value) {
@@ -154,7 +162,11 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
 
       if (attrs.min) {
         scope.$parent.$watch($parse(attrs.min), function(value) {
-          datepickerCtrl.minDate = value ? new Date(value) : null;
+          if(value){
+            datepickerCtrl.minDate =  new Date(value);
+          } else {
+            datepickerCtrl.minDate = null;
+          }
           refill();
         });
       }
@@ -182,15 +194,23 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
         var date = null, valid = true;
 
         if ( ngModel.$modelValue ) {
-          date = new Date( ngModel.$modelValue );
+          //date = new Date( ngModel.$modelValue );
+          var m = moment( ngModel.$modelValue );
+          if( m.isValid() ){
+            date = m.startOf('day').toDate();//strip time
+          }
 
-          if ( isNaN(date) ) {
+          //if ( isNaN(date) ) {
+          if ( !date ){
             valid = false;
-            $log.error('Datepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
+            //$log.error('Datepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
           } else if ( updateSelected ) {
             selected = date;
           }
+        } else if (datepickerCtrl.minDate){
+          selected = datepickerCtrl.minDate; //If control has no date, use min date for the calendar
         }
+
         ngModel.$setValidity('date', valid);
 
         var currentMode = datepickerCtrl.modes[mode], data = currentMode.getVisibleDates(selected, date);
@@ -268,200 +288,345 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
   return {
     restrict: 'EA',
     require: 'ngModel',
-    link: function(originalScope, element, attrs, ngModel) {
-      var dateFormat;
-      attrs.$observe('datepickerPopup', function(value) {
-          dateFormat = value || datepickerPopupConfig.dateFormat;
-          ngModel.$render();
-      });
+    link:  function(originalScope, element, attrs, ngModel) {
 
-      var closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? originalScope.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection;
-      var appendToBody = angular.isDefined(attrs.datepickerAppendToBody) ? originalScope.$eval(attrs.datepickerAppendToBody) : datepickerPopupConfig.appendToBody;
-      var displayOnFocus = angular.isDefined(attrs.displayOnFocus) ? originalScope.$eval(attrs.displayOnFocus) : datepickerPopupConfig.displayOnFocus;
-      var skipCalendarOnTab = angular.isDefined(attrs.skipCalendarOnTab) ? originalScope.$eval(attrs.skipCalendarOnTab) : datepickerPopupConfig.skipCalendarOnTab;
+          var options = originalScope.$eval(attrs.datepickerOptions),
+            dateFormat = options.displayFormat ? options.displayFormat.toUpperCase() : datepickerPopupConfig.dateFormat,
+            editFormat = options.editFormat ? options.editFormat.toUpperCase() : dateFormat;
 
-      // create a child scope for the datepicker directive so we are not polluting original scope
-      var scope = originalScope.$new();
+          if(!dateFormat){
+            attrs.$observe('datepickerPopup', function(value) {
+              dateFormat = value || datepickerPopupConfig.dateFormat;
+              dateFormat = dateFormat.toUpperCase();
+              if(!attrs.editFormat){
+                editFormat = dateFormat;
+              }
+              ngModel.$render();
+            });
+          }
 
-      originalScope.$on('$destroy', function() {
-        scope.$destroy();
-      });
+          if(!editFormat){
+            attrs.$observe('editFormat', function(value) {
+              editFormat = value || datepickerPopupConfig.dateFormat;
+              editFormat = editFormat.toUpperCase();
+              ngModel.$render();
+            });
+          }
 
-      attrs.$observe('currentText', function(text) {
-        scope.currentText = angular.isDefined(text) ? text : datepickerPopupConfig.currentText;
-      });
-      attrs.$observe('toggleWeeksText', function(text) {
-        scope.toggleWeeksText = angular.isDefined(text) ? text : datepickerPopupConfig.toggleWeeksText;
-      });
-      attrs.$observe('clearText', function(text) {
-        scope.clearText = angular.isDefined(text) ? text : datepickerPopupConfig.clearText;
-      });
-      attrs.$observe('closeText', function(text) {
-        scope.closeText = angular.isDefined(text) ? text : datepickerPopupConfig.closeText;
-      });
+          var closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? originalScope.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection;
+          var appendToBody = angular.isDefined(attrs.datepickerAppendToBody) ? originalScope.$eval(attrs.datepickerAppendToBody) : datepickerPopupConfig.appendToBody;
+          var displayOnFocus = angular.isDefined(attrs.displayOnFocus) ? originalScope.$eval(attrs.displayOnFocus) : datepickerPopupConfig.displayOnFocus;
+          var skipCalendarOnTab = angular.isDefined(attrs.skipCalendarOnTab) ? originalScope.$eval(attrs.skipCalendarOnTab) : datepickerPopupConfig.skipCalendarOnTab;
 
+          // create a child scope for the datepicker directive so we are not polluting original scope
+          var scope = originalScope.$new();
 
-      var getIsOpen, setIsOpen;
-      if ( attrs.isOpen ) {
-        getIsOpen = $parse(attrs.isOpen);
-        setIsOpen = getIsOpen.assign;
-
-        originalScope.$watch(getIsOpen, function updateOpen(value) {
-          scope.isOpen = !! value;
-        });
-      }
-      scope.isOpen = getIsOpen ? getIsOpen(originalScope) : false; // Initial state
-
-      function setOpen( value ) {
-        if (setIsOpen) {
-          setIsOpen(originalScope, !!value);
-        } else {
-          scope.isOpen = !!value;
-        }
-      }
-
-      var documentClickBind = function(event) {
-        if (scope.isOpen && event.target !== element[0]) {
-          scope.$apply(function() {
-            setOpen(false);
+          originalScope.$on('$destroy', function() {
+            scope.$destroy();
           });
-        }
-      };
 
-      var elementFocusBind = function() {
-        scope.$apply(function() {
-          setOpen( displayOnFocus );
-        });
-      };
+          attrs.$observe('currentText', function(text) {
+            scope.currentText = angular.isDefined(text) ? text : datepickerPopupConfig.currentText;
+          });
+          attrs.$observe('toggleWeeksText', function(text) {
+            scope.toggleWeeksText = angular.isDefined(text) ? text : datepickerPopupConfig.toggleWeeksText;
+          });
+          attrs.$observe('clearText', function(text) {
+            scope.clearText = angular.isDefined(text) ? text : datepickerPopupConfig.clearText;
+          });
+          attrs.$observe('closeText', function(text) {
+            scope.closeText = angular.isDefined(text) ? text : datepickerPopupConfig.closeText;
+          });
 
-      // popup element used to display calendar
-      var popupEl = angular.element('<div datepicker-popup-wrap' + (skipCalendarOnTab ? 'tabIndex="-1"': '') + '><div datepicker></div></div>');
-      popupEl.attr({
-        'ng-model': 'date',
-        'ng-change': 'dateSelection()'
-      });
-      var datepickerEl = angular.element(popupEl.children()[0]);
-      if (attrs.datepickerOptions) {
-        datepickerEl.attr(angular.extend({}, originalScope.$eval(attrs.datepickerOptions)));
-      }
+          var minDateMoment, maxDateMoment;
+          if (attrs.min) {
+            minDateMoment = scope.$parent.$eval(attrs.min);
+            scope.$parent.$watch($parse(attrs.min), function(value) {
+              minDateMoment = value ? moment(value).startOf('day') : null;
+              formatter(ngModel.$modelValue);//validate date
+            });
+          }
+          if (attrs.max) {
+            maxDateMoment = scope.$parent.$eval(attrs.max);
+            scope.$parent.$watch($parse(attrs.max), function(value) {
+              maxDateMoment = value ? moment(value).startOf('day') : null;
+              formatter(ngModel.$modelValue);//validate date
+            });
+          }
 
-      // TODO: reverse from dateFilter string to Date object
-      function parseDate(viewValue) {
-        if (!viewValue) {
-          ngModel.$setValidity('date', true);
-          return null;
-        } else if (angular.isDate(viewValue)) {
-          ngModel.$setValidity('date', true);
-          return viewValue;
-        } else if (angular.isString(viewValue)) {
-          var date = new Date(viewValue);
-          if (isNaN(date)) {
-            ngModel.$setValidity('date', false);
-            return undefined;
+          var getIsOpen, setIsOpen;
+          if ( attrs.isOpen ) {
+            getIsOpen = $parse(attrs.isOpen);
+            setIsOpen = getIsOpen.assign;
+
+            originalScope.$watch(getIsOpen, function updateOpen(value) {
+              scope.isOpen = !! value;
+            });
+          }
+          scope.isOpen = getIsOpen ? getIsOpen(originalScope) : false; // Initial state
+
+          function setOpen( value ) {
+            if (setIsOpen) {
+              setIsOpen(originalScope, !!value);
+            } else {
+              scope.isOpen = !!value;
+            }
+          }
+
+          var documentClickBind = function(event) {
+            if (scope.isOpen && event.target !== element[0]) {
+              scope.$apply(function() {
+                setOpen(false);
+              });
+            }
+          };
+
+          var hasFocus;
+          var elementFocusBind = function() {
+            hasFocus = true;
+            scope.$apply(function() {
+              ngModel.$render();
+              setOpen( !skipCalendarOnTab && displayOnFocus );
+            });
+          };
+
+          var elementBlurBind = function(){
+            hasFocus = false;
+            scope.$apply(function() {
+              ngModel.$render();
+            });
+          };
+
+          var renderBase = ngModel.$render;
+          ngModel.$render = function(){
+            renderBase();
+            if(ngModel.$modelValue && angular.isDate(ngModel.$modelValue)){
+              if(hasFocus){
+                element.val( moment(ngModel.$modelValue).format(editFormat) );
+              } else {
+                element.val( moment(ngModel.$modelValue).format(dateFormat) );
+              }
+            } else {
+              element.val( ngModel.$viewValue );
+            }
+          };
+
+          var formatter = function(value){
+            var result;
+            if(angular.isDate(value)){
+              var mom = moment(value),
+                isValid = true;
+
+              if(mom && mom.isValid()){
+
+                if(minDateMoment && moment(value).diff(minDateMoment, 'days') < 0){
+                  isValid = false;
+                  ngModel.$setValidity('date', true);
+                  ngModel.$setValidity('mindate', false);
+                }
+
+                if(maxDateMoment && moment(value).diff(maxDateMoment, 'days') > 0){
+                  isValid = false;
+                  ngModel.$setValidity('date', true);
+                  ngModel.$setValidity('maxdate', false);
+                }
+
+                if(isValid){
+                  ngModel.$setValidity('date', true);
+                  ngModel.$setValidity('mindate', true);
+                  ngModel.$setValidity('maxdate', true);
+                }
+
+                result = mom.startOf('day').format(dateFormat);
+
+              } else {
+                ngModel.$setValidity('date', false);
+                ngModel.$setValidity('mindate', true);
+                ngModel.$setValidity('maxdate', true);
+                result = value;
+              }
+            } else if (value) {
+              ngModel.$setValidity('date', false);
+              ngModel.$setValidity('mindate', true);
+              ngModel.$setValidity('maxdate', true);
+              result = value;
+            } else {
+              ngModel.$setValidity('date', true);
+              ngModel.$setValidity('mindate', true);
+              ngModel.$setValidity('maxdate', true);
+              result = value;
+            }
+
+            scope.date = ngModel.$modelValue;//update scope to update the datepicker control. This is done in the formatter since it is triggered when ng-model is updated.
+            return result;
+          };
+
+          ngModel.$formatters.push(formatter);
+
+          // popup element used to display calendar
+          var popupEl = angular.element('<div datepicker-popup-wrap><div datepicker></div></div>');
+          if( skipCalendarOnTab === true ){
+            popupEl.children().first().attr('skip-calendar-on-tab', true);
+          };
+          popupEl.attr({
+            'ng-model': 'date',
+            'ng-change': 'dateSelection()'
+          });
+
+          var datepickerEl = angular.element(popupEl.children()[0]);
+          if (attrs.datepickerOptions) {
+            datepickerEl.attr(angular.extend({}, originalScope.$eval(attrs.datepickerOptions)));
+          }
+
+
+
+          function parseDate(viewValue) {
+            if (!viewValue) {
+
+              ngModel.$setValidity('date', true);
+              return null;
+
+            } else if (angular.isDate(viewValue)) {
+
+              if(minDateMoment && moment(viewValue).diff(minDateMoment, 'days') < 0){
+                ngModel.$setValidity('date', true);
+                ngModel.$setValidity('mindate', false);
+                result = viewValue;
+              }
+
+              if(maxDateMoment && moment(viewValue).diff(maxDateMoment, 'days') > 0){
+                ngModel.$setValidity('date', true);
+                ngModel.$setValidity('maxdate', false);
+                return viewValue;
+              }
+
+              ngModel.$setValidity('date', true);
+              ngModel.$setValidity('mindate', true);
+              ngModel.$setValidity('maxdate', true);
+              return viewValue;
+
+            } else if (angular.isString(viewValue)) {
+              var mom;
+              if(editFormat.length == viewValue.length){//Don't attempt to parse dates in a partial state because some will return as valid
+                mom = moment(viewValue, editFormat).startOf('day');
+              }
+              if(mom && mom.isValid()){
+                var date = mom.toDate(),
+                  isValid = true;
+
+                if(minDateMoment && mom.diff(minDateMoment, 'days') < 0){
+                  isValid = false;
+                  ngModel.$setValidity('date', true);
+                  ngModel.$setValidity('mindate', false);
+                }
+
+                if(maxDateMoment && mom.diff(maxDateMoment, 'days') > 0){
+                  isValid = false;
+                  ngModel.$setValidity('date', true);
+                  ngModel.$setValidity('maxdate', false);
+                }
+
+                if(isValid){
+                  ngModel.$setValidity('date', true);
+                  ngModel.$setValidity('mindate', true);
+                  ngModel.$setValidity('maxdate', true);
+                }
+
+                return date;
+
+              } else {
+                ngModel.$setValidity('date', false);
+                return viewValue;
+              }
+            } else {
+              ngModel.$setValidity('date', false);
+              return viewValue;
+            }
+          }
+
+          ngModel.$parsers.unshift(parseDate);
+
+          // Inner change
+          scope.dateSelection = function() {
+            ngModel.$setViewValue(scope.date);
+            ngModel.$render();
+
+            if (closeOnDateSelection) {
+              setOpen( false );
+            }
+          };
+
+//      function updateCalendar() {
+//        scope.date = ngModel.$modelValue;
+//        updatePosition();
+//      }
+
+          function addWatchableAttribute(attribute, scopeProperty, datepickerAttribute) {
+            if (attribute) {
+              originalScope.$watch($parse(attribute), function(value){
+                scope[scopeProperty] = value;
+              });
+              datepickerEl.attr(datepickerAttribute || scopeProperty, scopeProperty);
+            }
+          }
+          addWatchableAttribute(attrs.min, 'min');
+          addWatchableAttribute(attrs.max, 'max');
+          if (attrs.showWeeks) {
+            addWatchableAttribute(attrs.showWeeks, 'showWeeks', 'show-weeks');
           } else {
-            ngModel.$setValidity('date', true);
-            return date;
+            scope.showWeeks = datepickerConfig.showWeeks;
+            datepickerEl.attr('show-weeks', 'showWeeks');
           }
-        } else {
-          ngModel.$setValidity('date', false);
-          return undefined;
-        }
-      }
-      ngModel.$parsers.unshift(parseDate);
+          if (attrs.dateDisabled) {
+            datepickerEl.attr('date-disabled', attrs.dateDisabled);
+          }
 
-      // Inner change
-      scope.dateSelection = function() {
-        ngModel.$setViewValue(scope.date);
-        ngModel.$render();
+          function updatePosition() {
+            scope.position = appendToBody ? $position.offset(element) : $position.position(element);
+            scope.position.top = scope.position.top + element.prop('offsetHeight');
+          }
 
-        if (closeOnDateSelection) {
-          setOpen( false );
-        }
-      };
+          var documentBindingInitialized = false, elementFocusInitialized = false;
+          scope.$watch('isOpen', function(value) {
+            if (value) {
+              updatePosition();
+              $document.bind('click', documentClickBind);
+              if(elementFocusInitialized) {
+                element.unbind('focus', elementFocusBind);
+                element.unbind('blur', elementBlurBind);
+              }
+              element[0].focus();
+              documentBindingInitialized = true;
+            } else {
+              if(documentBindingInitialized) {
+                $document.unbind('click', documentClickBind);
+              }
+              element.bind('focus', elementFocusBind);
+              element.bind('blur', elementBlurBind);
+              elementFocusInitialized = true;
+            }
 
-      element.bind('input change keyup', function() {
-        scope.$apply(function() {
-          updateCalendar();
-        });
-      });
-
-      // Outter change
-      ngModel.$render = function() {
-        var date = ngModel.$viewValue ? dateFilter(ngModel.$viewValue, dateFormat) : '';
-        element.val(date);
-
-        updateCalendar();
-      };
-
-      function updateCalendar() {
-        scope.date = ngModel.$modelValue;
-        updatePosition();
-      }
-
-      function addWatchableAttribute(attribute, scopeProperty, datepickerAttribute) {
-        if (attribute) {
-          originalScope.$watch($parse(attribute), function(value){
-            scope[scopeProperty] = value;
+            if ( setIsOpen ) {
+              setIsOpen(originalScope, value);
+            }
           });
-          datepickerEl.attr(datepickerAttribute || scopeProperty, scopeProperty);
-        }
-      }
-      addWatchableAttribute(attrs.min, 'min');
-      addWatchableAttribute(attrs.max, 'max');
-      if (attrs.showWeeks) {
-        addWatchableAttribute(attrs.showWeeks, 'showWeeks', 'show-weeks');
-      } else {
-        scope.showWeeks = datepickerConfig.showWeeks;
-        datepickerEl.attr('show-weeks', 'showWeeks');
-      }
-      if (attrs.dateDisabled) {
-        datepickerEl.attr('date-disabled', attrs.dateDisabled);
-      }
 
-      function updatePosition() {
-        scope.position = appendToBody ? $position.offset(element) : $position.position(element);
-        scope.position.top = scope.position.top + element.prop('offsetHeight');
-      }
+          var $setModelValue = $parse(attrs.ngModel).assign;
 
-      var documentBindingInitialized = false, elementFocusInitialized = false;
-      scope.$watch('isOpen', function(value) {
-        if (value) {
-          updatePosition();
-          $document.bind('click', documentClickBind);
-          if(elementFocusInitialized) {
-            element.unbind('focus', elementFocusBind);
+          scope.today = function() {
+            $setModelValue(originalScope, new Date());
+          };
+          scope.clear = function() {
+            $setModelValue(originalScope, null);
+          };
+
+          var $popup = $compile(popupEl)(scope);
+          if ( appendToBody ) {
+            $document.find('body').append($popup);
+          } else {
+            element.after($popup);
           }
-          element[0].focus();
-          documentBindingInitialized = true;
-        } else {
-          if(documentBindingInitialized) {
-            $document.unbind('click', documentClickBind);
-          }
-          element.bind('focus', elementFocusBind);
-          elementFocusInitialized = true;
-        }
-
-        if ( setIsOpen ) {
-          setIsOpen(originalScope, value);
-        }
-      });
-
-      var $setModelValue = $parse(attrs.ngModel).assign;
-
-      scope.today = function() {
-        $setModelValue(originalScope, new Date());
-      };
-      scope.clear = function() {
-        $setModelValue(originalScope, null);
-      };
-
-      var $popup = $compile(popupEl)(scope);
-      if ( appendToBody ) {
-        $document.find('body').append($popup);
-      } else {
-        element.after($popup);
-      }
-    }
+        } // link
   };
 }])
 
