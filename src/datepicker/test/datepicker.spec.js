@@ -1,14 +1,26 @@
 describe('datepicker directive', function () {
-  var $rootScope, element;
+  var $rootScope, element,$document,$timeout;
   beforeEach(module('ui.bootstrap.datepicker'));
   beforeEach(module('template/datepicker/datepicker.html'));
   beforeEach(module('template/datepicker/popup.html'));
-  beforeEach(inject(function(_$compile_, _$rootScope_) {
+  beforeEach(inject(function(_$compile_, _$rootScope_, _$document_, _$timeout_) {
     $compile = _$compile_;
+    $document = _$document_;
+    $timeout = _$timeout_;
     $rootScope = _$rootScope_;
     $rootScope.date = new Date("September 30, 2010 15:30:00");
     element = $compile('<datepicker ng-model="$parent.date"></datepicker>')($rootScope);
     $rootScope.$digest();
+
+
+    this.addMatchers({
+      toBeFocused: function(){
+        this.message = function(){
+          return 'Expected' + this.actual[0] + ' to be focused.';
+        };
+        return this.actual[0] === this.actual[0].ownerDocument.activeElement;
+      }
+    });
   }));
 
   function getTitle() {
@@ -37,11 +49,8 @@ describe('datepicker directive', function () {
     }
   }
 
-  function pressTab(){
-    var press = jQuery.Event("keypress");
-    press.ctrlKey = false;
-    press.which = 9;
-    $(document).trigger(press);
+  function pressTab(el){
+    el.trigger($.Event('keypress', { which: 9, keyCode: 9 }));
   };
 
   function getLabelsRow() {
@@ -954,12 +963,13 @@ describe('datepicker directive', function () {
   });
 
   describe('as popup', function () {
-    var divElement, inputEl, dropdownEl, changeInputValueTo, $document;
+    var divElement, inputEl, dropdownEl, changeInputValueTo, $document, wrapperEl;
 
     function assignElements(wrapElement) {
       inputEl = wrapElement.find('input');
       dropdownEl = wrapElement.find('ul');
       element = dropdownEl.find('table');
+      wrapperEl = wrapElement;
     }
 
     beforeEach(inject(function(_$document_, $sniffer) {
@@ -969,12 +979,18 @@ describe('datepicker directive', function () {
       $rootScope.$digest();
       assignElements(wrapElement);
 
+      $document.find('body').append(wrapElement);
+
       changeInputValueTo = function (el, value) {
         el.val(value);
         el.trigger($sniffer.hasEvent('input') ? 'input' : 'change');
         $rootScope.$digest();
       };
     }));
+
+    afterEach(function(){
+      //wrapperEl.remove();
+    });
 
     it('to display the correct value in input', function() {
       expect(inputEl.val()).toBe('2010-09-30');
@@ -1050,10 +1066,21 @@ describe('datepicker directive', function () {
       expect(dropdownEl.css('display')).toBe('none');
     });
 
+
     it('should focus on calendar when tab is pressed', function(){
       inputEl.focus();
-      pressTab();
-      expect(dropdownEl.find('button:has(".glyphicon-chevron-left")').first()[0]).toMatch($document[0].activeElement);
+
+      //expect(inputEl).toBeFocused();
+
+      $document.on('keypress', function(ev){
+        console.log(ev.which);
+      });
+
+      var prevMonthButton = dropdownEl.find('button:has(".glyphicon-chevron-left")').first();
+
+      pressTab(inputEl);
+
+      expect(prevMonthButton).toBeFocused();
     });
 
     describe('with skipCalendarOnTab set to True', function () {
@@ -1061,12 +1088,22 @@ describe('datepicker directive', function () {
         var wrapElement = $compile('<div><input ng-model="date" datepicker-popup display-on-focus="true" skip-calendar-on-tab="true"><div>')($rootScope);
         $rootScope.$digest();
         assignElements(wrapElement);
+
       }));
 
       it('should not focus on calendar when tab is pressed', function(){
         inputEl.focus();
-        pressTab();
-        expect(dropdownEl.find('button:has(".glyphicon-chevron-left")').first()[0]).toMatch($document[0].activeElement);
+
+        pressTab(inputEl);
+
+        console.log('focus3', $document[0].activeElement);
+
+        var prevMonthButton = dropdownEl.find('button:has(".glyphicon-chevron-left")').first();
+
+        console.log('prevMonth2',prevMonthButton[0], '\r\n');
+
+        expect(prevMonthButton).toBeFocused();
+
       });
     });
 
