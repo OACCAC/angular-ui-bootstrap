@@ -249,8 +249,12 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
       };
       scope.move = function(direction) {
         var step = datepickerCtrl.modes[mode].step;
-        selected.setMonth( selected.getMonth() + direction * (step.months || 0) );
-        selected.setFullYear( selected.getFullYear() + direction * (step.years || 0) );
+        //selected.setMonth( selected.getMonth() + direction * (step.months || 0) );
+        //selected.setFullYear( selected.getFullYear() + direction * (step.years || 0) );
+        selected = moment(selected)
+          .add('months', direction * (step.months || 0))
+          .add('year', direction * (step.years || 0))
+          .toDate();
         refill();
       };
       scope.toggleMode = function() {
@@ -412,54 +416,64 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
             }
           };
 
-          var formatter = function(value){
-            var result;
-            if(angular.isDate(value)){
-              var mom = moment(value),
-                isValid = true;
+          /** Set up a watch so we can convert the initial model value into a date, if necessary **/
+          scope.$ngModel = ngModel; //temporarily capture ngModel on the scope so we can watch it.
+          var initialParseDeReg = scope.$watch('$ngModel.$modelValue', function(newValue){
+            if(newValue && !angular.isDate(newValue)){
+              var mom = moment(newValue);
+              if(mom.isValid()){
+                ngModel.$setViewValue(mom.toDate());
+                ngModel.$render();
+              }
+              delete scope.$ngModel; //delete
+              initialParseDeReg();//remove watch after initial value examined
+            }
+          });
 
-              if(mom && mom.isValid()){
+          var formatter = function(modelValue){
+              if( angular.isDate(modelValue) ){
+                  var mom = moment(modelValue);
 
-                if(minDateMoment && moment(value).diff(minDateMoment, 'days') < 0){
-                  isValid = false;
-                  ngModel.$setValidity('date', true);
-                  ngModel.$setValidity('mindate', false);
-                }
+                  if( mom && mom.isValid() ){
+                    var isValid = true;
+                    if(minDateMoment && moment(modelValue).diff(minDateMoment, 'days') < 0){
+                      isValid = false;
+                      ngModel.$setValidity('date', true);
+                      ngModel.$setValidity('mindate', false);
+                    }
 
-                if(maxDateMoment && moment(value).diff(maxDateMoment, 'days') > 0){
-                  isValid = false;
-                  ngModel.$setValidity('date', true);
-                  ngModel.$setValidity('maxdate', false);
-                }
+                    if(maxDateMoment && moment(modelValue).diff(maxDateMoment, 'days') > 0){
+                      isValid = false;
+                      ngModel.$setValidity('date', true);
+                      ngModel.$setValidity('maxdate', false);
+                    }
 
-                if(isValid){
+                    if(isValid){
+                      ngModel.$setValidity('date', true);
+                      ngModel.$setValidity('mindate', true);
+                      ngModel.$setValidity('maxdate', true);
+                    }
+
+                    scope.date = ngModel.$modelValue;//update scope to update the datepicker control. This is done in the formatter since it is triggered when ng-model is updated.
+                    return mom.startOf('day').format(dateFormat);
+
+                  } else {
+                    ngModel.$setValidity('date', false);
+                    ngModel.$setValidity('mindate', true);
+                    ngModel.$setValidity('maxdate', true);
+                    return undefined;
+                  }
+              } else if (modelValue) {
+                  ngModel.$setValidity('date', false);
+                  ngModel.$setValidity('mindate', true);
+                  ngModel.$setValidity('maxdate', true);
+                  return undefined;
+              } else {
                   ngModel.$setValidity('date', true);
                   ngModel.$setValidity('mindate', true);
                   ngModel.$setValidity('maxdate', true);
-                }
-
-                result = mom.startOf('day').format(dateFormat);
-
-              } else {
-                ngModel.$setValidity('date', false);
-                ngModel.$setValidity('mindate', true);
-                ngModel.$setValidity('maxdate', true);
-                result = value;
+                  return undefined;
               }
-            } else if (value) {
-              ngModel.$setValidity('date', false);
-              ngModel.$setValidity('mindate', true);
-              ngModel.$setValidity('maxdate', true);
-              result = value;
-            } else {
-              ngModel.$setValidity('date', true);
-              ngModel.$setValidity('mindate', true);
-              ngModel.$setValidity('maxdate', true);
-              result = value;
-            }
-
-            scope.date = ngModel.$modelValue;//update scope to update the datepicker control. This is done in the formatter since it is triggered when ng-model is updated.
-            return result;
           };
 
           ngModel.$formatters.push(formatter);
@@ -467,82 +481,82 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
           // popup element used to display calendar
           var popupEl = angular.element('<div datepicker-popup-wrap><div datepicker></div></div>');
           if( skipCalendarOnTab === true ){
-            popupEl.children().first().attr('skip-calendar-on-tab', true);
+              popupEl.children().first().attr('skip-calendar-on-tab', true);
           };
+
           popupEl.attr({
-            'ng-model': 'date',
-            'ng-change': 'dateSelection()'
+              'ng-model': 'date',
+              'ng-change': 'dateSelection()'
           });
 
           var datepickerEl = angular.element(popupEl.children()[0]);
           if (attrs.datepickerOptions) {
-            datepickerEl.attr(angular.extend({}, originalScope.$eval(attrs.datepickerOptions)));
+              datepickerEl.attr(angular.extend({}, originalScope.$eval(attrs.datepickerOptions)));
           }
 
 
 
           function parseDate(viewValue) {
-            if (!viewValue) {
+              if ( !viewValue ) {
 
-              ngModel.$setValidity('date', true);
-              return null;
-
-            } else if (angular.isDate(viewValue)) {
-
-              if(minDateMoment && moment(viewValue).diff(minDateMoment, 'days') < 0){
-                ngModel.$setValidity('date', true);
-                ngModel.$setValidity('mindate', false);
-                result = viewValue;
-              }
-
-              if(maxDateMoment && moment(viewValue).diff(maxDateMoment, 'days') > 0){
-                ngModel.$setValidity('date', true);
-                ngModel.$setValidity('maxdate', false);
-                return viewValue;
-              }
-
-              ngModel.$setValidity('date', true);
-              ngModel.$setValidity('mindate', true);
-              ngModel.$setValidity('maxdate', true);
-              return viewValue;
-
-            } else if (angular.isString(viewValue)) {
-              var mom;
-              if(editFormat.length == viewValue.length){//Don't attempt to parse dates in a partial state because some will return as valid
-                mom = moment(viewValue, editFormat).startOf('day');
-              }
-              if(mom && mom.isValid()){
-                var date = mom.toDate(),
-                  isValid = true;
-
-                if(minDateMoment && mom.diff(minDateMoment, 'days') < 0){
-                  isValid = false;
                   ngModel.$setValidity('date', true);
-                  ngModel.$setValidity('mindate', false);
-                }
+                  return undefined;
 
-                if(maxDateMoment && mom.diff(maxDateMoment, 'days') > 0){
-                  isValid = false;
-                  ngModel.$setValidity('date', true);
-                  ngModel.$setValidity('maxdate', false);
-                }
+              } else if ( angular.isDate(viewValue) ) {
+                  if( minDateMoment && moment(viewValue).diff(minDateMoment, 'days') < 0 ){
+                      ngModel.$setValidity('date', true);
+                      ngModel.$setValidity('mindate', false);
+                      return viewValue;
+                  }
 
-                if(isValid){
+                  if( maxDateMoment && moment(viewValue).diff(maxDateMoment, 'days') > 0 ){
+                      ngModel.$setValidity('date', true);
+                      ngModel.$setValidity('maxdate', false);
+                      return viewValue;
+                  }
+
                   ngModel.$setValidity('date', true);
                   ngModel.$setValidity('mindate', true);
                   ngModel.$setValidity('maxdate', true);
+                  return viewValue;
+
+              } else if ( angular.isString(viewValue) ) {
+                  var mom;
+                  if( editFormat.length == viewValue.length ){//Don't attempt to parse dates in a partial state because some will return as valid
+                      mom = moment(viewValue, editFormat).startOf('day');
+                  }
+                  if( mom && mom.isValid() ){
+                    var date = mom.toDate(),
+                        isValid = true;
+
+                    if( minDateMoment && mom.diff(minDateMoment, 'days') < 0 ){
+                        isValid = false;
+                        ngModel.$setValidity('date', true);
+                        ngModel.$setValidity('mindate', false);
+                    }
+
+                    if( maxDateMoment && mom.diff(maxDateMoment, 'days') > 0 ){
+                        isValid = false;
+                        ngModel.$setValidity('date', true);
+                        ngModel.$setValidity('maxdate', false);
+                    }
+
+                    if( isValid ){
+                        ngModel.$setValidity('date', true);
+                        ngModel.$setValidity('mindate', true);
+                        ngModel.$setValidity('maxdate', true);
+                    }
+
+                    return date;
+
+                } else {
+                    ngModel.$setValidity('date', false);
+                    return undefined;
                 }
-
-                return date;
-
               } else {
-                ngModel.$setValidity('date', false);
-                return viewValue;
+                  ngModel.$setValidity('date', false);
+                  return undefined;
               }
-            } else {
-              ngModel.$setValidity('date', false);
-              return viewValue;
-            }
           }
 
           ngModel.$parsers.unshift(parseDate);
