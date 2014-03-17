@@ -500,6 +500,8 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
               if ( !viewValue ) {
 
                   ngModel.$setValidity('date', true);
+                  ngModel.$setValidity('mindate', true);
+                  ngModel.$setValidity('maxdate', true);
                   return undefined;
 
               } else if ( angular.isDate(viewValue) ) {
