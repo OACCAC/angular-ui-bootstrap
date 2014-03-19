@@ -52,7 +52,8 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
   }
 
   function makeDate(date, format, isSelected, isSecondary) {
-    return { date: date, label: dateFilter(date, format), selected: !!isSelected, secondary: !!isSecondary };
+    var todayDateString = new Date().toDateString();
+    return { date: date, label: dateFilter(date, format), selected: !!isSelected, secondary: !!isSecondary, isToday: date.toDateString() == todayDateString };
   }
 
   this.modes = [
