@@ -289,8 +289,8 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
   skipCalendarOnTab: false
 })
 
-.directive('datepickerPopup', ['$compile', '$parse', '$document', '$position', 'dateFilter', 'datepickerPopupConfig', 'datepickerConfig',
-function ($compile, $parse, $document, $position, dateFilter, datepickerPopupConfig, datepickerConfig) {
+.directive('datepickerPopup', ['$compile', '$parse', '$document', '$position', 'dateFilter', 'datepickerPopupConfig', 'datepickerConfig', '$timeout',
+function ($compile, $parse, $document, $position, dateFilter, datepickerPopupConfig, datepickerConfig, $timeout) {
   return {
     restrict: 'EA',
     require: 'ngModel',
@@ -379,7 +379,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
             }
           }
 
-          var documentClickBind = function(event) {
+          var onDocumentClick = function(event) {
             if (scope.isOpen && event.target !== element[0]) {
               scope.$apply(function() {
                 setOpen(false);
@@ -388,15 +388,14 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
           };
 
           var hasFocus;
-          var elementFocusBind = function() {
+          var onElementFocusFormatter = function() {
             hasFocus = true;
             scope.$apply(function() {
               ngModel.$render();
-              setOpen( !skipCalendarOnTab && displayOnFocus );
             });
           };
 
-          var elementBlurBind = function(){
+          var onElementBlurFormatter = function(){
             hasFocus = false;
             scope.$apply(function() {
               ngModel.$render();
@@ -571,14 +570,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
 
             if (closeOnDateSelection) {
               setOpen( false );
-            }
-          };
-
-//      function updateCalendar() {
-//        scope.date = ngModel.$modelValue;
-//        updatePosition();
-//      }
-
+            }plz email me teh codez
           function addWatchableAttribute(attribute, scopeProperty, datepickerAttribute) {
             if (attribute) {
               originalScope.$watch($parse(attribute), function(value){
@@ -605,23 +597,35 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
           }
 
           var documentBindingInitialized = false, elementFocusInitialized = false;
+          element.bind('focus', onElementFocusFormatter);
+          element.bind('blur', onElementBlurFormatter);
+
+          var onElementFocusCalendarOpener;
+          if(displayOnFocus){
+            onElementFocusCalendarOpener = function(){
+              setOpen( !skipCalendarOnTab && displayOnFocus );
+            };
+          };
           scope.$watch('isOpen', function(value) {
+
             if (value) {
               updatePosition();
-              $document.bind('click', documentClickBind);
-              if(elementFocusInitialized) {
-                element.unbind('focus', elementFocusBind);
-                element.unbind('blur', elementBlurBind);
+              $document.bind('click', onDocumentClick);
+              if(elementFocusInitialized && onElementFocusCalendarOpener) {
+                element.unbind('focus', onElementFocusCalendarOpener);
               }
-              element[0].focus();
+              $timeout(function(){ //focus element in timeout so onElementFocusFormatter will fire
+                element[0].focus();
+              });
               documentBindingInitialized = true;
             } else {
               if(documentBindingInitialized) {
-                $document.unbind('click', documentClickBind);
+                $document.unbind('click', onDocumentClick);
               }
-              element.bind('focus', elementFocusBind);
-              element.bind('blur', elementBlurBind);
-              elementFocusInitialized = true;
+              if(onElementFocusCalendarOpener){
+                element.bind('focus', onElementFocusCalendarOpener);
+                elementFocusInitialized = true;
+              }
             }
 
             if ( setIsOpen ) {
