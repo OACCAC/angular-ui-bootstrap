@@ -570,7 +570,9 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
 
             if (closeOnDateSelection) {
               setOpen( false );
-            }plz email me teh codez
+            }
+          };
+
           function addWatchableAttribute(attribute, scopeProperty, datepickerAttribute) {
             if (attribute) {
               originalScope.$watch($parse(attribute), function(value){
