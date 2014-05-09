@@ -171,8 +171,11 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
             }
           } else {
             datepickerCtrl.minDate = null;
+            if (!ngModel.$modelValue) {
+              selected = null;
+            }
           }
-          refill();
+          refill(true);
         });
       }
       if (attrs.max) {
@@ -199,23 +202,18 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
         var date = null, valid = true;
 
         if ( ngModel.$modelValue ) {
-          //date = new Date( ngModel.$modelValue );
-          var m = moment( ngModel.$modelValue );
-          if( m.isValid() ){
-            date = m.startOf('day').toDate();//strip time
-          }
-
-          //if ( isNaN(date) ) {
-          if ( !date ){
+          if ( !angular.isDate( ngModel.$modelValue ) ){
             valid = false;
-            //$log.error('Datepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
-          } else if ( updateSelected ) {
-            selected = date;
+          } else {
+            date = ngModel.$modelValue;
+            if ( updateSelected ) {
+              selected = date;
+            }
           }
         } else {
           date = null; //selected date
           if( !selected && updateSelected ) { //selected is populated by datepicker navigation so don't overwrite
-            selected = moment().startOf('day').toDate(); //visible date
+            selected = datepickerCtrl.minDate || moment().startOf('day').toDate(); //visible date
           }
         }
 
@@ -240,6 +238,9 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
       }
 
       ngModel.$render = function() {
+        if(ngModel.$viewValue == null){
+          selected = null;
+        }
         refill( true );
       };
 
@@ -300,7 +301,8 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
     link:  function(originalScope, element, attrs, ngModel) {
           var options = originalScope.$eval(attrs.datepickerOptions) || {};
           var dateFormat = options.displayFormat ? options.displayFormat.toUpperCase() : datepickerPopupConfig.dateFormat.toUpperCase();
-          var editFormat = options.editFormat ? options.editFormat.toUpperCase() : dateFormat;
+          var editFormat = options.editFormat ? options.editFormat.toUpperCase().split(',') : dateFormat;
+          var editFormatLengths = [];
 
           attrs.$observe('datepickerPopup', function(value) {
             dateFormat = value || datepickerPopupConfig.dateFormat;
@@ -314,9 +316,17 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
           if(!editFormat){
             attrs.$observe('editFormat', function(value) {
               editFormat = value || datepickerPopupConfig.dateFormat;
-              editFormat = editFormat.toUpperCase();
+              editFormat = editFormat.toUpperCase().split(',');
               ngModel.$render();
             });
+          } else {
+            if(angular.isArray(editFormat)) {
+              //Trim formats and capture lengths
+              angular.forEach(editFormat, function(format,key){
+                editFormat[key] = format.trim();
+                editFormatLengths.push(editFormat[key].length);
+              });
+            }
           }
 
           var closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? originalScope.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection;
@@ -395,7 +405,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
             });
           };
 
-          var onElementBlurFormatter = function(){
+          var onElementBlurFormatter = function(e){
             hasFocus = false;
             scope.$apply(function() {
               ngModel.$render();
@@ -407,7 +417,10 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
             renderBase();
             if(ngModel.$modelValue && angular.isDate(ngModel.$modelValue)){
               if(hasFocus){
-                element.val( moment(ngModel.$modelValue).format(editFormat) );
+                if(angular.isArray(editFormat)) {
+                  var format = editFormat[0];
+                  element.val(moment(ngModel.$modelValue).format(format));
+                }
               } else {
                 element.val( moment(ngModel.$modelValue).format(dateFormat) );
               }
@@ -462,18 +475,20 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
                     ngModel.$setValidity('date', false);
                     ngModel.$setValidity('mindate', true);
                     ngModel.$setValidity('maxdate', true);
+                    scope.date = undefined;
                     return undefined;
                   }
               } else if (modelValue) {
                   ngModel.$setValidity('date', false);
                   ngModel.$setValidity('mindate', true);
                   ngModel.$setValidity('maxdate', true);
+                  scope.date = undefined;
                   return undefined;
               } else {
                   ngModel.$setValidity('date', true);
                   ngModel.$setValidity('mindate', true);
                   ngModel.$setValidity('maxdate', true);
-                  scope.date = null;
+                  scope.date = undefined;
                   return undefined;
               }
           };
@@ -490,6 +505,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
                   ngModel.$setValidity('date', true);
                   ngModel.$setValidity('mindate', true);
                   ngModel.$setValidity('maxdate', true);
+                  scope.date = undefined;
                   return undefined;
 
               } else if ( angular.isDate(viewValue) ) {
@@ -512,9 +528,12 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
 
               } else if ( angular.isString(viewValue) ) {
                   var mom;
-                  if( editFormat.length == viewValue.length ){//Don't attempt to parse dates in a partial state because some will return as valid
-                      mom = moment(viewValue, editFormat).startOf('day');
+                  var ixMatchingFormat = editFormatLengths.indexOf(viewValue.length);
+                  var hasMatchingFormat = ixMatchingFormat > -1;
+                  if( hasMatchingFormat ){//Don't attempt to parse dates in a partial state because some will return as valid
+                      mom = moment(viewValue, editFormat[ixMatchingFormat]).startOf('day');
                   }
+
                   if( mom && mom.isValid() ){
                     var date = mom.toDate(),
                         isValid = true;
@@ -541,10 +560,12 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
 
                 } else {
                     ngModel.$setValidity('date', false);
+                    scope.date = undefined;
                     return undefined;
                 }
               } else {
                   ngModel.$setValidity('date', false);
+                  scope.date = undefined;
                   return undefined;
               }
           }
