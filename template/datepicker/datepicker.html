@@ -23,7 +23,7 @@
     <tr ng-repeat="row in rows">
       <td ng-show="showWeekNumbers" class="text-center" style="overflow: hidden; min-width: 26px"><button type="button" class="btn btn-xs btn-link" disabled><strong><em>{{ getWeekNumber(row) }}</em></strong></button></td>
       <td ng-repeat="dt in row" class="text-center" style="overflow: hidden; min-width: 26px">
-        <button type="button" style="width: 100%; border: 0px" class="btn btn-xs" ng-class="{'btn-primary': dt.selected, 'btn-default': !(dt.selected || dt.isToday)}" ng-click="select(dt.date)" ng-disabled="dt.disabled"><span ng-class="{'text-muted': dt.secondary && !dt.selected}">{{dt.label}}</span></button>
+        <button type="button" style="width: 100%; border: 0px" class="btn btn-xs" ng-class="{'btn-success': dt.selected, 'btn-primary': dt.isToday, 'btn-default': !(dt.selected || dt.isToday)}" ng-click="select(dt.date)" ng-disabled="dt.disabled"><span ng-class="{'text-muted': dt.secondary && !dt.selected}">{{dt.label}}</span></button>
       </td>
     </tr>
   </tbody>
