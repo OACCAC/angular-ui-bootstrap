@@ -78,7 +78,7 @@ describe('datepicker directive', function () {
     var tabables = $('input:visible[tabindex!=-1],select:visible[tabindex!=-1],textarea:visible[tabindex!=-1],button:visible[tabindex!=-1]');
     var index = tabables.index(el[0]);
     tabables.eq(index + 1).focus();
-  };
+  }
 
   function getLabelsRow() {
     return element.find('thead').find('tr').eq(1);

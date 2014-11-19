@@ -576,7 +576,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
           var popupEl = angular.element('<div datepicker-popup-wrap><div datepicker></div></div>');
           if( skipCalendarOnTab === true ){
             popupEl.children().first().attr('skip-calendar-on-tab', true);
-          };
+          }
 
           popupEl.attr({
             'ng-model': 'date',
@@ -632,7 +632,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
             onElementFocusCalendarOpener = function(){
               setOpen( !skipCalendarOnTab && displayOnFocus );
             };
-          };
+          }
           scope.$watch('isOpen', function(value) {
             updatePosition();
 
