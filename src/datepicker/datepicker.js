@@ -224,7 +224,9 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
           obj.disabled = datepickerCtrl.isDisabled(obj.date, mode);
         });
 
-        ngModel.$setValidity('date-disabled', (!date || !datepickerCtrl.isDisabled(date)));
+        if(attrs.dateDisabled) {
+          ngModel.$setValidity('date-disabled', (!date || !datepickerCtrl.isDisabled(date)));
+        }
 
         scope.rows = split(data.objects, currentMode.split);
         scope.labels = data.labels || [];
