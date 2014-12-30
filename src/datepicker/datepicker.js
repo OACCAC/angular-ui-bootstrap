@@ -558,15 +558,19 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
                     scope.date = date;//update the scope so the calendar gets updated
                     return date;
 
-                } else {
+                  } else {
                     ngModel.$setValidity('date', false);
+                    ngModel.$setValidity('mindate', true);
+                    ngModel.$setValidity('maxdate', true);
                     scope.date = undefined;
                     return undefined;
-                }
+                  }
               } else {
-                  ngModel.$setValidity('date', false);
-                  scope.date = undefined;
-                  return undefined;
+                ngModel.$setValidity('date', false);
+                ngModel.$setValidity('mindate', true);
+                ngModel.$setValidity('maxdate', true);
+                scope.date = undefined;
+                return undefined;
               }
           }
 
