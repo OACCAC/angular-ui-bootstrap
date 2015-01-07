@@ -669,7 +669,9 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
           var $setModelValue = $parse(attrs.ngModel).assign;
 
           scope.today = function() {
-            $setModelValue(originalScope, new Date());
+          	var startOfDay = new Date();
+          	startOfDay.setHours(0, 0, 0, 0);
+          	$setModelValue(originalScope, startOfDay);
           };
           scope.clear = function() {
             $setModelValue(originalScope, null);
