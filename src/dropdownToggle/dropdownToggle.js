@@ -167,7 +167,9 @@ angular.module('ui.bootstrap.dropdownToggle', ['ui.bootstrap.position'])
             //Move element to the body
             $animate.move(dropdownMenu, $document.find('body'));
             dropdownMenu.css({position: 'absolute'});
-            updateDropdownMenuPosition();
+            $timeout(function () {
+              updateDropdownMenuPosition();
+            }, 0, false);
           }
 
           element.bind('click', toggleDropdown);
