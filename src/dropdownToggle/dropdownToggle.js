@@ -125,7 +125,7 @@ angular.module('ui.bootstrap.dropdownToggle', ['ui.bootstrap.position'])
       };
     })
 
-    .directive('dropdownToggle', ['$animate','$document','$position', function($animate,$document,$position) {
+    .directive('dropdownToggle', ['$animate','$document','$position','$timeout','$window', function($animate,$document,$position,$timeout,$window) {
       return {
         require: '?^dropdown',
         link: function(scope, element, attrs, dropdownCtrl) {
@@ -170,6 +170,7 @@ angular.module('ui.bootstrap.dropdownToggle', ['ui.bootstrap.position'])
             $timeout(function () {
               updateDropdownMenuPosition();
             }, 0, false);
+            $($window).on('resize',updateDropdownMenuPosition);
           }
 
           element.bind('click', toggleDropdown);
