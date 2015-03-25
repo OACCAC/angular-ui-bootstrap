@@ -491,7 +491,12 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
                   ngModel.$setValidity('mindate', true);
                   ngModel.$setValidity('maxdate', true);
                   scope.date = undefined;
-                  return undefined;
+                  if (ngModel.$viewValue != undefined) {
+                  	return parseDate(ngModel.$viewValue);
+                  }
+                  else {
+                  	return undefined;
+                  }
               }
           };
 
