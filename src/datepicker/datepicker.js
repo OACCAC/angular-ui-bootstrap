@@ -490,13 +490,11 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
                   ngModel.$setValidity('date', true);
                   ngModel.$setValidity('mindate', true);
                   ngModel.$setValidity('maxdate', true);
-                  scope.date = undefined;
                   if (ngModel.$viewValue != undefined) {
-                  	return parseDate(ngModel.$viewValue);
+                  	var parseResult = parseDate(ngModel.$viewValue);
                   }
-                  else {
-                  	return undefined;
-                  }
+                  scope.date = undefined;
+              	  return undefined;
               }
           };
 
@@ -679,6 +677,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
           	$setModelValue(originalScope, startOfDay);
           };
           scope.clear = function() {
+			ngModel.$viewValue = null;		  
             $setModelValue(originalScope, null);
           };
 
