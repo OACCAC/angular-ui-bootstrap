@@ -167,7 +167,8 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
           if(value){
             datepickerCtrl.minDate =  new Date(value);
             if(!ngModel.$modelValue){
-              selected = new Date(value);
+              //selected = new Date(value);
+			  selected = null;
             }
           } else {
             datepickerCtrl.minDate = null;
@@ -213,7 +214,8 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
         } else {
           date = null; //selected date
           if( !selected && updateSelected ) { //selected is populated by datepicker navigation so don't overwrite
-            selected = datepickerCtrl.minDate || moment().startOf('day').toDate(); //visible date
+            //selected = datepickerCtrl.minDate || moment().startOf('day').toDate(); //visible date
+			selected = moment().startOf('day').toDate();
           }
         }
 
