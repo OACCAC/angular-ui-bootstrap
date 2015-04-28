@@ -13,7 +13,8 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
   startingDay: 0,
   yearRange: 20,
   minDate: null,
-  maxDate: null
+  maxDate: null,
+  defaultViewDate: null  
 })
 
 .controller('DatepickerController', ['$scope', '$attrs', 'dateFilter', 'datepickerConfig', function($scope, $attrs, dateFilter, dtConfig) {
@@ -166,13 +167,15 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
         scope.$parent.$watch($parse(attrs.min), function(value) {
           if(value){
             datepickerCtrl.minDate =  new Date(value);
-            if(!ngModel.$modelValue){
-              //selected = new Date(value);
-			  selected = null;
+            if (!attrs.defaultViewDate) {
+            	if (!ngModel.$modelValue)
+            	{
+            		selected = new Date(value);
+            	}
             }
           } else {
             datepickerCtrl.minDate = null;
-            if (!ngModel.$modelValue) {
+            if (!attrs.defaultViewDate && !ngModel.$modelValue) {
               selected = null;
             }
           }
@@ -184,6 +187,23 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.position'])
           datepickerCtrl.maxDate = value ? new Date(value) : null;
           refill();
         });
+      }
+      if (attrs.defaultViewDate)
+      {
+      	scope.$parent.$watch($parse(attrs.defaultViewDate), function (value) {
+      		if (value) {
+      			datepickerCtrl.defaultViewDate = new Date(value);
+      			if (!ngModel.$modelValue) {
+					selected = new Date(value);
+      			}
+      		} else {
+      			datepickerCtrl.defaultViewDate = null;
+      			if (!ngModel.$modelValue) {
+      				selected = null;
+      			}
+      		}
+      		refill(true);
+      	});
       }
 
       function updateShowWeekNumbers() {
@@ -358,7 +378,14 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
             scope.closeText = angular.isDefined(text) ? text : datepickerPopupConfig.closeText;
           });
 
-          var minDateMoment, maxDateMoment;
+          var minDateMoment, maxDateMoment, defaultViewDateMoment;
+          if (attrs.defaultViewDate) {
+          	defaultViewDateMoment = scope.$parent.$eval(attrs.defaultViewDate);
+          	scope.$parent.$watch($parse(attrs.defaultViewDate), function (value) {
+          		defaultViewDateMoment = value ? moment(value).startOf('day') : null;
+          		formatter(ngModel.$modelValue);//validate date
+          	});
+          }		  
           if (attrs.min) {
             minDateMoment = scope.$parent.$eval(attrs.min);
             scope.$parent.$watch($parse(attrs.min), function(value) {
@@ -619,6 +646,7 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
           }
           addWatchableAttribute(attrs.min, 'min');
           addWatchableAttribute(attrs.max, 'max');
+		  addWatchableAttribute(attrs.defaultViewDate, 'defaultViewDate', 'default-view-date');
           if (attrs.showWeeks) {
             addWatchableAttribute(attrs.showWeeks, 'showWeeks', 'show-weeks');
           } else {
