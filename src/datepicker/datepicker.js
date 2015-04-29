@@ -480,22 +480,16 @@ function ($compile, $parse, $document, $position, dateFilter, datepickerPopupCon
                   var mom = moment(modelValue);
 
                   if( mom && mom.isValid() ){
-                    var isValid = true;
+                    ngModel.$setValidity('date', true);
                     if(minDateMoment && moment(modelValue).isBefore(minDateMoment, 'day')){
-                      isValid = false;
-                      ngModel.$setValidity('date', true);
                       ngModel.$setValidity('mindate', false);
+                    } else {
+                      ngModel.$setValidity('mindate', true);
                     }
 
                     if(maxDateMoment && moment(modelValue).isAfter(maxDateMoment, 'day')){
-                      isValid = false;
-                      ngModel.$setValidity('date', true);
                       ngModel.$setValidity('maxdate', false);
-                    }
-
-                    if(isValid){
-                      ngModel.$setValidity('date', true);
-                      ngModel.$setValidity('mindate', true);
+                    } else {
                       ngModel.$setValidity('maxdate', true);
                     }
 
